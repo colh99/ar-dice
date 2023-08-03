@@ -7,7 +7,6 @@ public class DiceInteraction : MonoBehaviour
     private Rigidbody diceRigidbody;
     private Collider diceCollider;
     private bool isGrabbed = false;
-    private Vector3 fingerOffset;
     private Vector2 initialFingerPosition;
     private Vector2 accumulatedSwipeDelta;
 
@@ -63,6 +62,8 @@ public class DiceInteraction : MonoBehaviour
         
     }
 
+    // Determines if each dice is colliding with something.
+    // Used to determine if the dice should rumble.
     void OnCollisionEnter(Collision collision)
     {
         this.collision = collision;
@@ -72,6 +73,7 @@ public class DiceInteraction : MonoBehaviour
     {
         this.collision = null;
     }
+
 
     private void OnEnable()
     {
@@ -91,6 +93,7 @@ public class DiceInteraction : MonoBehaviour
         EnhancedTouch.Touch.onFingerUp -= FingerUp;
     }
 
+
     private void FingerDown(EnhancedTouch.Finger finger)
     {
         Ray raycast = Camera.main.ScreenPointToRay(finger.screenPosition);
@@ -100,7 +103,6 @@ public class DiceInteraction : MonoBehaviour
             if (raycastHit.collider == diceCollider)
             {
                 isGrabbed = true;
-                fingerOffset = transform.position - raycastHit.point;
                 diceRigidbody.useGravity = false;
 
                 // Store the initial finger position for calculating swipe delta
@@ -152,10 +154,14 @@ public class DiceInteraction : MonoBehaviour
         float normalizedSwipeMagnitude = Mathf.Min(swipeDelta.magnitude, maxSwipeMagnitude) / maxSwipeMagnitude;
         Vector2 normalizedSwipeDirection = swipeDelta.normalized;
 
-        // Calculate the throw velocity based on the swipe direction and force
+        // Get the camera's forward direction
+        Vector3 cameraForward = Camera.main.transform.forward;
+        cameraForward.y = 0f; // Project the forward direction to the XZ plane (assuming Y is up)
+
+        // Calculate the throw velocity based on the swipe direction and force, and the camera's forward direction
         float throwForceMultiplier = throwForce * normalizedSwipeMagnitude;
         float throwForceClamped = Mathf.Clamp(throwForceMultiplier, 0f, maxThrowForce);
-        Vector3 throwVelocity = new Vector3(normalizedSwipeDirection.x, 0f, normalizedSwipeDirection.y) * throwForceClamped;
+        Vector3 throwVelocity = (cameraForward * normalizedSwipeDirection.y + Camera.main.transform.right * normalizedSwipeDirection.x) * throwForceClamped;
 
         return throwVelocity;
     }
